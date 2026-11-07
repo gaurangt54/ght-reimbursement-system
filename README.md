@@ -1,5 +1,7 @@
 # Reimbursement Management System
 
+[![CI](https://github.com/gaurangt54/ght-reimbursement-system/actions/workflows/ci.yml/badge.svg)](https://github.com/gaurangt54/ght-reimbursement-system/actions/workflows/ci.yml)
+
 Employees create expense claims and submit them. Approvers review them, approve them (in full or
 partly) or reject them, and mark approved claims as paid. Every step is kept in a per-claim history.
 
@@ -16,6 +18,16 @@ A rejected claim can be corrected and resubmitted. A submitted claim can be with
 More detail: [docs/DATA_MODEL.md](docs/DATA_MODEL.md) (tables, ER and state diagrams, error codes),
 [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) (concurrency, duplicates, auth, trade-offs) and
 [docs/REQUIREMENTS_TRACEABILITY.md](docs/REQUIREMENTS_TRACEABILITY.md) (each requirement mapped to its code and tests).
+
+## Screenshots
+
+| Employee: my claims (dark) | Approver: partial approval |
+|---|---|
+| ![Employee claim list with status tabs and totals](docs/screenshots/employee-claims.jpg) | ![Approve dialog showing the live partial-approval warning](docs/screenshots/partial-approval.jpg) |
+
+**Claim history (light theme):** every step is recorded with who, when and the approver's comment.
+
+![Claim detail with amounts, details and history timeline in the light theme](docs/screenshots/claim-history-light.jpg)
 
 ## Prerequisites
 
@@ -150,6 +162,7 @@ frontend/
     pages/               Login, MyClaims, ClaimForm, ClaimDetail, ReviewQueue, ReviewedClaims
     lib/                 validation, formatting, error text, routes
 docs/                    data model, design decisions, requirement traceability
+.github/workflows/ci.yml  CI: backend tests + frontend lint/tests/build on every push
 ```
 
 ### API at a glance
