@@ -1,6 +1,6 @@
 """Request bodies. Pydantic validates shape and basic ranges here;
 business rules (dates, limits, receipts) live in services/rules.py."""
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -58,3 +58,77 @@ class PayIn(ActionIn):
     payment_reference: str | None = Field(default=None, max_length=64)
 
     _clean = field_validator("payment_reference")(_blank_to_none)
+    
+# ======================= Response bodies =======================
+
+class UserOut(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    role: str | None = None
+
+
+class LoginIn(BaseModel):
+    user_id: int
+
+
+class LoginOut(BaseModel):
+    token: str
+    user: UserOut
+
+
+class EventOut(BaseModel):
+    id: int
+    action: str
+    from_status: str | None
+    to_status: str | None
+    comment: str | None
+    details: dict | None
+    created_at: datetime
+    user: UserOut
+
+
+class ClaimOut(BaseModel):
+    id: int
+    employee: UserOut
+    title: str
+    description: str | None
+    category: str
+    amount: Decimal
+    currency: str
+    expense_date: date
+    receipt_ref: str | None
+    status: str
+    version: int
+    approved_amount: Decimal | None
+    is_partial: bool
+    reviewer: UserOut | None
+    review_comment: str | None
+    reviewed_at: datetime | None
+    paid_at: datetime | None
+    payment_reference: str | None
+    submitted_at: datetime | None
+    resubmission_count: int
+    created_at: datetime
+    updated_at: datetime
+    allowed_actions: list[str]  # what the *current user* may do right now
+
+
+class ClaimDetailOut(ClaimOut):
+    events: list[EventOut]
+
+
+class ClaimListOut(BaseModel):
+    items: list[ClaimOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class SummaryOut(BaseModel):
+    currency: str
+    counts: dict[str, int]
+    total_claimed: Decimal
+    pending_amount: Decimal    # waiting for approval
+    approved_amount: Decimal   # approved (incl. paid)
+    paid_amount: Decimal
