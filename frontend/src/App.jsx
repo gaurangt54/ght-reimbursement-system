@@ -3,8 +3,11 @@ import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './hooks/useAuth'
 import { ROLES, homePathFor } from './lib/routes'
+import { ClaimDetailPage } from './pages/ClaimDetailPage'
+import { ClaimFormPage } from './pages/ClaimFormPage'
 import { ComingSoonPage } from './pages/ComingSoonPage'
 import { LoginPage } from './pages/LoginPage'
+import { MyClaimsPage } from './pages/MyClaimsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
 function HomeRedirect() {
@@ -21,15 +24,15 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<HomeRedirect />} />
 
-          {/* Employee screens (Phase 7) */}
+          {/* Employee screens */}
           <Route element={<ProtectedRoute roles={[ROLES.EMPLOYEE]} />}>
-            <Route path="claims" element={<ComingSoonPage title="My claims" phase={7} />} />
-            <Route path="claims/new" element={<ComingSoonPage title="New claim" phase={7} />} />
-            <Route path="claims/:id/edit" element={<ComingSoonPage title="Edit claim" phase={7} />} />
+            <Route path="claims" element={<MyClaimsPage />} />
+            <Route path="claims/new" element={<ClaimFormPage />} />
+            <Route path="claims/:id/edit" element={<ClaimFormPage />} />
           </Route>
 
-          {/* Shared: both roles open a claim, and see different actions (Phases 7 and 8) */}
-          <Route path="claims/:id" element={<ComingSoonPage title="Claim details" phase="7 and 8" />} />
+          {/* Shared: both roles open a claim; the server decides which actions each may use */}
+          <Route path="claims/:id" element={<ClaimDetailPage />} />
 
           {/* Approver screens (Phase 8) */}
           <Route element={<ProtectedRoute roles={[ROLES.APPROVER]} />}>
