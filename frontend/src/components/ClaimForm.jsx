@@ -5,20 +5,9 @@ import { useToast } from '../hooks/useToast'
 import { errorMessage } from '../lib/errors'
 import { formatMoney, todayIso } from '../lib/format'
 import { validateClaim } from '../lib/validation'
+import { Field } from './Field' 
 
-function Field({ label, name, error, hint, className = '', children }) {
-  return (
-    <div className={`field ${error ? 'field-invalid' : ''} ${className}`}>
-      <label htmlFor={name}>{label}</label>
-      {children}
-      {error ? (
-        <div className="field-error" id={`${name}-error`} role="alert">{error}</div>
-      ) : (
-        hint && <div className="hint">{hint}</div>
-      )}
-    </div>
-  )
-}
+
 
 // Create or edit a claim. `claim` is undefined when creating.
 export function ClaimForm({ meta, claim, initialError }) {

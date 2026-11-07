@@ -194,3 +194,8 @@ a { color: var(--primary); }
 .spacer { flex: 1; }
 .btn-danger-text { color: var(--danger); }
 .btn-danger-text:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+
+.review-summary { display: flex; flex-direction: column; gap: 0.15rem; margin: 0 0 1rem; padding: 0.7rem 0.85rem; background: var(--neutral-soft); border-radius: 8px; }
+.inline-field { display: inline-flex; align-items: center; gap: 0.4rem; }
+.inline-field .input { min-width: 0; }
+.modal .field { margin-bottom: 0.9rem; }

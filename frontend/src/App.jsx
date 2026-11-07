@@ -5,10 +5,11 @@ import { useAuth } from './hooks/useAuth'
 import { ROLES, homePathFor } from './lib/routes'
 import { ClaimDetailPage } from './pages/ClaimDetailPage'
 import { ClaimFormPage } from './pages/ClaimFormPage'
-import { ComingSoonPage } from './pages/ComingSoonPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyClaimsPage } from './pages/MyClaimsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ReviewQueuePage } from './pages/ReviewQueuePage'
+import { ReviewedClaimsPage } from './pages/ReviewedClaimsPage'
 
 function HomeRedirect() {
   const { user } = useAuth()
@@ -34,10 +35,10 @@ export default function App() {
           {/* Shared: both roles open a claim; the server decides which actions each may use */}
           <Route path="claims/:id" element={<ClaimDetailPage />} />
 
-          {/* Approver screens (Phase 8) */}
+          {/* Approver screens */}
           <Route element={<ProtectedRoute roles={[ROLES.APPROVER]} />}>
-            <Route path="review" element={<ComingSoonPage title="Pending review" phase={8} />} />
-            <Route path="review/history" element={<ComingSoonPage title="Reviewed claims" phase={8} />} />
+            <Route path="review" element={<ReviewQueuePage />} />
+            <Route path="review/history" element={<ReviewedClaimsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

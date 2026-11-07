@@ -1,8 +1,25 @@
 import { Link } from 'react-router-dom'
-import { formatDate, formatDateTime, formatMoney } from '../lib/format'
+import { formatAgo, formatDate, formatDateTime, formatMoney } from '../lib/format'
 import { StatusBadge } from './StatusBadge'
 
-export function ClaimsTable({ claims, showEmployee = false }) {
+const TIME_COLUMNS = {
+  updated_at: 'Updated',
+  submitted_at: 'Submitted',
+  reviewed_at: 'Reviewed',
+}
+
+// One table for every list in the app. Optional columns:
+//   showEmployee  - who made the claim (approver views)
+//   showReviewer  - who approved/rejected it
+//   timeColumn    - which timestamp to show: updated_at (default), submitted_at, reviewed_at
+//   actionLabel   - adds a button column linking to the claim (e.g. "Review")
+export function ClaimsTable({
+  claims,
+  showEmployee = false,
+  showReviewer = false,
+  timeColumn = 'updated_at',
+  actionLabel,
+}) {
   return (
     <div className="table-wrap">
       <table className="table">
@@ -14,7 +31,9 @@ export function ClaimsTable({ claims, showEmployee = false }) {
             <th>Expense date</th>
             <th className="right">Amount</th>
             <th>Status</th>
-            <th>Updated</th>
+            {showReviewer && <th>Reviewer</th>}
+            <th>{TIME_COLUMNS[timeColumn]}</th>
+            {actionLabel && <th />}
           </tr>
         </thead>
         <tbody>
@@ -42,7 +61,16 @@ export function ClaimsTable({ claims, showEmployee = false }) {
                   <div className="muted small">Resubmitted ×{claim.resubmission_count}</div>
                 )}
               </td>
-              <td className="muted small nowrap">{formatDateTime(claim.updated_at)}</td>
+              {showReviewer && <td>{claim.reviewer?.name ?? '-'}</td>}
+              <td className="muted small nowrap">
+                {formatDateTime(claim[timeColumn])}
+                {timeColumn === 'submitted_at' && <div>{formatAgo(claim.submitted_at)}</div>}
+              </td>
+              {actionLabel && (
+                <td className="right">
+                  <Link className="btn btn-secondary btn-sm" to={`/claims/${claim.id}`}>{actionLabel}</Link>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

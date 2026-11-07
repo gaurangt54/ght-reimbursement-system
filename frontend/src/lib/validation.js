@@ -45,3 +45,34 @@ export function validateClaim(values, meta, { forSubmit = false } = {}) {
   if (values.description.length > 1000) errors.description = 'Description can be at most 1000 characters.'
   return errors
 }
+
+
+// ---- Approver checks (same wording as the backend, for instant feedback) ----
+
+// values: { amount: string, comment: string }; claim: the claim being reviewed
+export function validateApproval(values, claim) {
+    const errors = {}
+    const text = values.amount.trim()
+    if (!text) {
+      errors.approved_amount = 'Enter the amount to approve.'
+    } else if (!AMOUNT_PATTERN.test(text)) {
+      errors.approved_amount = 'Enter a valid amount with at most 2 decimal places.'
+    } else {
+      const amount = Number(text)
+      const claimed = Number(claim.amount)
+      if (amount <= 0) {
+        errors.approved_amount = 'Approved amount must be greater than zero.'
+      } else if (amount > claimed) {
+        errors.approved_amount = `Approved amount cannot exceed the claimed amount (${formatMoney(claim.amount, claim.currency)}).`
+      } else if (amount < claimed && !values.comment.trim()) {
+        errors.comment = 'A comment explaining the reduction is required for a partial approval.'
+      }
+    }
+    return errors
+  }
+  
+  export function validateRejection(values) {
+    const errors = {}
+    if (values.comment.trim().length < 3) errors.comment = 'Please give a reason (at least 3 characters).'
+    return errors
+  }
