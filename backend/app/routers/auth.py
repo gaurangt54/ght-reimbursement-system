@@ -42,8 +42,13 @@ def _respond(response: Response, session: auth_svc.IssuedSession) -> dict:
 
 
 @router.post("/login", response_model=TokenOut)
-def login(body: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)):
-    return _respond(response, auth_svc.login(db, body.email, body.password, client_ip(request)))
+def login(body: LoginIn, request: Request, response: Response, db: Session = Depends(get_db),
+          refresh_token: str | None = Cookie(default=None, alias=config.REFRESH_COOKIE_NAME)):
+    session = auth_svc.login(db, body.email, body.password, client_ip(request))
+    # This browser had a session (maybe another user's): its cookie is about to be replaced,
+    # so end that login now instead of leaving it valid until it expires.
+    auth_svc.logout(db, refresh_token)
+    return _respond(response, session)
 
 
 @router.post("/refresh", response_model=TokenOut, dependencies=[Depends(require_csrf_header)])

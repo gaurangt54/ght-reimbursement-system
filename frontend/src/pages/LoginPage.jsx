@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Field } from '../components/Field'
 import { Spinner } from '../components/Spinner'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { useAuth } from '../hooks/useAuth'
 import { homePathFor } from '../lib/routes'
 
@@ -64,6 +65,7 @@ export function LoginPage() {
 
   return (
     <div className="login-page">
+      <ThemeToggle className="login-theme-toggle" />
       <div className="login-card card">
         <div className="login-head">
           <span className="brand-mark brand-mark-lg" aria-hidden="true">₹</span>

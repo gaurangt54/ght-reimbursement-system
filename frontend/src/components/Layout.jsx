@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { initials } from '../lib/format'
 import { ROLES } from '../lib/routes'
+import { ThemeToggle } from './ThemeToggle'
 
 const NAV = {
   [ROLES.EMPLOYEE]: [
@@ -44,6 +45,7 @@ export function Layout() {
               <strong>{user.name}</strong>
               <small>{user.role === ROLES.APPROVER ? 'Approver' : 'Employee'}</small>
             </span>
+            <ThemeToggle />
             <button type="button" className="btn btn-ghost btn-sm" onClick={handleLogout}>
               Log out
             </button>

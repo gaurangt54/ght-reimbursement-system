@@ -10,8 +10,8 @@ A rejected claim can be corrected and resubmitted. A submitted claim can be with
 |---|---|
 | Backend | Python 3.10+, FastAPI, SQLAlchemy 2, Pydantic 2, PyJWT, bcrypt |
 | Database | SQLite (WAL mode), one file: `backend/reimbursement.db` |
-| Frontend | React 19, React Router 7, Vite 8 (plain CSS, no UI kit) |
-| Tests | pytest (backend: 138 tests), Vitest + Testing Library (frontend: 51 tests) |
+| Frontend | React 19, React Router 7, Vite 8 (plain CSS, no UI kit; light and dark themes, follows the OS until you pick one) |
+| Tests | pytest (backend: 140 tests), Vitest + Testing Library (frontend: 57 tests) |
 
 More detail: [docs/DATA_MODEL.md](docs/DATA_MODEL.md) (tables, ER and state diagrams, error codes),
 [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) (concurrency, duplicates, auth, trade-offs) and
@@ -53,7 +53,7 @@ to the backend on port 8000, so no extra configuration is needed.
 
 ### Demo accounts
 
-Created only when `SEED_DEMO_DATA=true` (the default). All of them use the password **`Password@123`**.
+Created only when `SEED_DEMO_DATA=true` (the default). All of them use the password `Password@123`.
 In dev builds the login page also lists them, and clicking one fills the form.
 
 | Name | Email | Role |
@@ -102,11 +102,11 @@ All of them are optional in dev. Set them in the shell or in `backend/.env` (see
 ## Running the tests
 
 ```bash
-cd backend && source .venv/bin/activate && python -m pytest       # 138 tests, ~2 s
+cd backend && source .venv/bin/activate && python -m pytest       # 140 tests, ~2 s
 ```
 
 ```bash
-cd frontend && npm test                                            # 51 tests, ~2 s
+cd frontend && npm test                                            # 57 tests, ~2 s
 ```
 
 ```bash
@@ -118,7 +118,8 @@ the full lifecycle, every invalid transition, validation boundaries, permissions
 real multi-threaded races, queries and CSV export, and all of the authentication behaviour (token
 tampering, expiry, `alg: none`, refresh rotation and reuse, logout, throttling, password change).
 Frontend tests cover the validation and formatting helpers, `StatusBadge`, `ClaimsTable`,
-`ApproveDialog`, and the API client's 401 → refresh → retry logic.
+`ApproveDialog`, the theme toggle, cross-tab sign-in/sign-out sync, and the API client's
+401 → refresh → retry logic.
 
 ## Project structure
 
@@ -189,13 +190,13 @@ docs/                    data model, design decisions, requirement traceability
 
 - **No migrations.** The schema is created with `create_all`. After a schema change, run `python -m app.cli reset-db`. The app detects an old schema and refuses to start rather than misbehave.
 - **SQLite allows one writer at a time.** Fine for this scale. Writes queue for up to 5 s (busy timeout). For many concurrent users, move to Postgres. The conditional-UPDATE design carries over.
-- **Amounts are stored as `REAL`, rounded to 2 decimals.** All arithmetic and comparisons use `Decimal` in Python, and values are re-quantised on read, but the column itself is binary floating point. Integer paise would be stricter.
+- **Amounts are stored as** `REAL`**, rounded to 2 decimals.** All arithmetic and comparisons use `Decimal` in Python, and values are re-quantised on read, but the column itself is binary floating point. Integer paise would be stricter.
 - **The login throttle is in memory.** It resets on restart and is per process (not shared across workers).
 - **Duplicate detection is a heuristic:** same employee + currency + category + amount + date + title (case- and space-insensitive) among live claims. Two genuinely different expenses that match exactly are refused, and the employee must change the title.
 - **CSV export is capped at 5,000 rows** per request. Narrow the filters to export more.
 - **Withdrawn claims look deleted to approvers.** A withdrawn claim is a private draft again, so an approver who had it open gets "no longer available" (404) instead of "withdrawn".
 - Access tokens are stateless. After logout or a password change, an already-issued access token keeps working until it expires (≤ 15 min), although the app discards it immediately. Deactivation and role changes apply at once.
-- **One signed-in user per browser.** All tabs share the refresh cookie, so signing in as someone else in one tab moves the other tabs to that user at their next refresh (within 15 minutes). To try two roles side by side, use a private window or a second browser.
+- **One signed-in user per browser.** All tabs share the refresh cookie, so signing in as someone else in one tab switches the other open tabs to that user straight away (with a notice), and ends the previous user's session on the server. To try two roles side by side, use a private window or a second browser.
 - There is no self-registration, password-reset email or change-password screen (the change-password API exists).
 - In dev without `JWT_SECRET`, a backend restart invalidates access tokens. The app silently refreshes, so users don't notice.
 - `npm audit` reports moderate advisories in the dev-only `eslint` dependency tree (`minimatch`). They don't affect the built app.
@@ -214,24 +215,31 @@ docs/                    data model, design decisions, requirement traceability
 
 ## AI usage disclosure
 
-> **Draft. Edit this so it describes what you actually did before submitting.** The parts marked
-> ✎ are guesses or placeholders that only you can confirm.
+**Tool:** Claude Code (Anthropic), used inside this repository through the Claude desktop app.
 
-- **Tool:** Claude Code (Anthropic), working in this repository through the Claude desktop app.
-- **What it produced:**
-  - ✎ *Phases 1–8 (data model, rules, API, backend tests, React screens):* describe your split here. For example, which parts you designed and which it generated from your prompts.
-  - *Phase 9* was implemented by Claude Code from a written plan I gave it. Phase 9 covers real JWT authentication (backend, frontend, and 38 new backend tests), the Vitest suite (51 tests), these docs and the requirement-traceability table, and the final cleanup.
-- **What I reviewed or changed myself:** ✎ list the design decisions you made (for example: conditional UPDATE plus `version` for concurrency, the duplicate rule, the policy limits, the auth design choices), and any code you rewrote or rejected.
-- **How it was verified:**
-  - Backend: `pytest`, 138 passing. That is the original 100 (the 8 auth tests updated to the new login contract) plus 38 new auth tests.
-  - Frontend: `npm test`, 51 passing. `npm run lint` and `npm run build` are clean.
-  - Manual browser passes in a real browser:
-    - deep link → login → returned to the same page;
-    - wrong password shows a generic error;
-    - reload keeps the session, with exactly one refresh call and nothing in `localStorage`;
-    - after a backend restart, two concurrent 401s triggered one refresh and both requests were retried;
-    - logging out in one tab logged out the other;
-    - a revoked session showed a single "session expired" toast and redirected to login.
-  - The demo script above was replayed step by step against the running API (all expected results).
-  - A clean clone was set up by following this README: new venv, `npm ci`, both test suites, and the app started.
-  - ✎ add your own manual checks.
+**How the work was split**
+
+| Me (Gaurang)                                                                                                                                                                                                                       | Claude Code                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read the brief and planned the solution: scope, assumptions and the policy rules (amount cap, receipt threshold, 90-day window, approvers not reviewing their own claims).                                                         | Wrote most of the code from my plans: backend (models, rules, services, API) and frontend (pages, components, API client).                   |
+| Designed the structure: the data model, the claim state machine, the frontend / backend / database separation and the folder layout.                                                                                               | Ran linting (`eslint`) and kept the code clean.                                                                                              |
+| Broke the work into phases.                                                                                                                                                                                                        | Wrote and ran the tests: 140 backend (pytest) and 57 frontend (Vitest).                                                                      |
+| Made the key design decisions: optimistic locking with `version` for concurrent actions, the duplicate-claim rule, partial approval, and the authentication design (JWT access token in memory, rotating HttpOnly refresh cookie). | Drafted the documentation (this README, `docs/`) and the requirement-traceability table.                                                     |
+| Reviewed the output, asked for changes and fixes, and checked the flows myself in the browser.                                                                                                                                     | Did browser and API checks of the flows, a clean-clone setup run, and the cleanup (removing the committed virtualenv, one commit per phase). |
+
+I understand the implementation and can explain or modify any part of it.
+
+**How it was verified**
+
+- Backend: `pytest`, 140 passing (full lifecycle, invalid transitions, validation, permissions, duplicates, real multi-threaded races, queries/CSV, and all of the authentication behaviour).
+- Frontend: `npm test`, 57 passing. `npm run lint` and `npm run build` are clean.
+- Browser checks:
+  - employee and approver flows;
+  - deep link → login → back to the same page;
+  - reload keeps the session (exactly one refresh call, nothing in `localStorage`);
+  - after a backend restart, concurrent 401s triggered one refresh and the requests were retried;
+  - cross-tab logout;
+  - an expired session shows one "session expired" message;
+  - light/dark themes and the phone-width layout.
+- The demo script above was replayed step by step against the running API.
+- A fresh clone was set up by following this README exactly: new venv, `npm ci`, both test suites, and the app started.

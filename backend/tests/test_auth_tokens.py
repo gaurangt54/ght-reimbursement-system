@@ -20,6 +20,12 @@ def login(client, email=EMP, password=PASSWORD):
     return client.post("/api/auth/login", json={"email": email, "password": password})
 
 
+def login_on_new_device(client, email=EMP, password=PASSWORD):
+    """Log in with an empty cookie jar, i.e. from another browser/device."""
+    client.cookies.clear()
+    return login(client, email, password)
+
+
 def refresh_with(client, raw):
     """Refresh using exactly this refresh token (bypassing the client's cookie jar)."""
     client.cookies.clear()
@@ -201,9 +207,9 @@ def test_replay_after_grace_window_revokes_the_whole_family(client, db):
 
 
 def test_reuse_only_revokes_that_login_not_other_devices(client, db):
-    laptop = login(client).cookies["refresh_token"]
-    phone = login(client).cookies["refresh_token"]
-    refresh_with(client, laptop)
+    laptop = login_on_new_device(client).cookies["refresh_token"]
+    phone = login_on_new_device(client).cookies["refresh_token"]
+    assert refresh_with(client, laptop).status_code == 200
     db.execute(update(RefreshToken).where(RefreshToken.revoked_at.is_not(None))
                .values(revoked_at=utcnow() - timedelta(minutes=5)))
     db.commit()
@@ -225,6 +231,20 @@ def test_refresh_for_deactivated_user_fails(client, db):
     db.execute(update(User).where(User.email == EMP).values(is_active=False))
     db.commit()
     assert refresh_with(client, raw).status_code == 401
+
+
+def test_signing_in_again_ends_the_browsers_previous_session(client):
+    aarav = login(client).cookies["refresh_token"]   # the cookie jar now holds Aarav's token
+    r = login(client, "neha@napho.test")              # same browser, different user
+    assert r.status_code == 200
+    assert refresh_with(client, aarav).status_code == 401
+    assert refresh_with(client, r.cookies["refresh_token"]).json()["user"]["email"] == "neha@napho.test"
+
+
+def test_failed_login_does_not_end_the_current_session(client):
+    raw = login(client).cookies["refresh_token"]
+    assert login(client, EMP, "wrong-password").status_code == 401
+    assert refresh_with(client, raw).status_code == 200
 
 
 # ---------- logout ----------
@@ -269,7 +289,8 @@ def test_successful_login_resets_the_failure_count(client):
 # ---------- change password ----------
 
 def test_change_password_revokes_other_sessions(client):
-    other_device = login(client).cookies["refresh_token"]
+    other_device = login_on_new_device(client).cookies["refresh_token"]
+    client.cookies.clear()
     headers = login_headers(client, EMP)
     r = client.post("/api/auth/change-password", headers=headers,
                     json={"current_password": PASSWORD, "new_password": "Brand-new-pass-2"})

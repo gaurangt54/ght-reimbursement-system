@@ -4,8 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0f1320" />
+    <script>
+      // Pick the theme before first paint (no flash): saved choice, else the OS setting, else dark.
+      (function () {
+        var theme = null
+        try { theme = localStorage.getItem('theme') } catch (e) { /* storage blocked */ }
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+        }
+        document.documentElement.dataset.theme = theme
+      })()
+    </script>
     <title>Reimbursements</title>
   </head>
   <body>

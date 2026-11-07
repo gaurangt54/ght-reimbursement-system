@@ -2,8 +2,8 @@
 
 Every requirement, scenario and edge case in *Napho Engineering Assignment: Reimbursement
 Management System*, with the code that implements it and the tests or checks that cover it.
-Backend tests are in `backend/tests/` (138, pytest). Frontend tests sit next to the code in
-`frontend/src/**/*.test.*` (51, Vitest). "Manual" means checked in a real browser (see the README
+Backend tests are in `backend/tests/` (140, pytest). Frontend tests sit next to the code in
+`frontend/src/**/*.test.*` (57, Vitest). "Manual" means checked in a real browser (see the README
 demo script). There are no automated end-to-end UI tests; that gap is listed under
 "If I had more time" in [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md#if-i-had-more-time).
 
@@ -14,7 +14,7 @@ demo script). There are no automated end-to-end UI tests; that gap is listed und
 | D1 | Working application and Git repository | `backend/`, `frontend/`, one commit per phase | Clean-clone run of the README; manual demo |
 | D2 | README with setup instructions, assumptions and known limitations | [`README.md`](../README.md) | Clean-clone run followed it command by command |
 | D3 | Brief explanation of the data model and key design decisions | [`DATA_MODEL.md`](DATA_MODEL.md), [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) | — |
-| D4 | Relevant tests | `backend/tests/`, `frontend/src/**/*.test.*` | 138 + 51 passing |
+| D4 | Relevant tests | `backend/tests/`, `frontend/src/**/*.test.*` | 140 + 57 passing |
 | D5 | AI usage disclosed | README → *AI usage disclosure* | — |
 | T1 | Backend in Python | FastAPI app in `backend/app/` | All backend tests |
 | T2 | Frontend in React | Vite + React 19 in `frontend/src/` | Frontend tests; manual |
@@ -44,7 +44,7 @@ demo script). There are no automated end-to-end UI tests; that gap is listed und
 | A3 | Approver: view previously reviewed claims | `scope=reviewed` + `ReviewedClaimsPage` (filters, employee filter, sort, CSV) | `test_pending_queue_oldest_first_and_reviewed_scope`, `test_csv_export_for_approver`, `test_csv_respects_filters` |
 | A4 | Approver: mark approved claims as paid | `/pay` (`APPROVED` → `PAID`), `PayDialog` | `test_full_flow_to_paid`, `test_edge_cases::test_cannot_pay_before_approval`, `test_cannot_pay_twice` |
 | R1 | Roles are enforced (not just hidden in the UI) | `_require_owner`, `_require_reviewer`, `require_approver`; `allowed_actions` drives the buttons | `test_approver_cannot_create_claims`, `test_employee_cannot_review_or_pay`, `test_employee_cannot_see_or_touch_other_employees_claims`, `test_approver_cannot_edit_claims`, `test_approver_cannot_review_own_claim`, `test_rules::test_allowed_actions_*` |
-| R2 | "A mocked login/user setup is sufficient" | Went beyond it: real email + password auth with JWT access tokens and rotating refresh cookies | `test_auth.py` (8), `test_auth_tokens.py` (38); `client.test.js`; manual auth passes |
+| R2 | "A mocked login/user setup is sufficient" | Went beyond it: real email + password auth with JWT access tokens and rotating refresh cookies | `test_auth.py` (8), `test_auth_tokens.py` (40); `client.test.js`, `AuthProvider.test.jsx`; manual auth passes |
 | R3 | No real payment integration | Payment is a record (`paid_at`, `paid_by_id`, `payment_reference`) | `test_full_flow_to_paid` |
 
 ## Claim lifecycle and history
@@ -85,7 +85,7 @@ demo script). There are no automated end-to-end UI tests; that gap is listed und
 | Search treats `%` and `_` literally | `test_search_treats_wildcards_literally` |
 | CSV formula injection (`=`, `+`, `-`, `@`) | `test_csv_neutralises_formula_injection` |
 | Invalid filter values → 422, not 500 | `test_invalid_filter_values_return_422` |
-| Auth: enumeration-safe login, timing, tampered / expired / `alg: none` / wrong-algorithm tokens, refresh rotation and reuse, logout, CSRF header, throttle, password rules, old DB schema | `test_auth_tokens.py` (38 tests) |
+| Auth: enumeration-safe login, timing, tampered / expired / `alg: none` / wrong-algorithm tokens, refresh rotation and reuse, logout, CSRF header, throttle, password rules, old DB schema | `test_auth_tokens.py` (40 tests) |
 
 ## Gaps found and how they were resolved
 

@@ -1,4 +1,4 @@
-/* ===== Design tokens (dark theme) =====
+/* ===== Design tokens: dark (default) =====
    Accent colours come in two flavours: a light tint for text/icons on dark surfaces
    (--primary, --danger, …) and a deeper "solid" for filled buttons/toasts carrying white text,
    so both keep readable contrast. */
@@ -41,6 +41,8 @@
   --row-hover: rgba(255, 255, 255, 0.03);
   --toast-info: #2c3550;
   --backdrop: rgba(4, 6, 14, 0.7);
+  --tab-count: rgba(255, 255, 255, 0.08);
+  --modal-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
   --radius: 10px;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.25);
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -48,6 +50,55 @@
   background: var(--bg);
   line-height: 1.5;
 }
+
+/* ===== Design tokens: light =====
+   index.html sets data-theme on <html> before first paint (saved choice, else the OS setting). */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #e2e6ef;
+  --input-border: #c9cfdd;
+  --input-bg: #ffffff;
+  --text: #1b2236;
+  --muted: #5f6981;
+  --primary: #4338ca;
+  --primary-solid: #4338ca;
+  --primary-hover: #3730a3;
+  --primary-soft: #eef0ff;
+  --focus: rgba(67, 56, 202, 0.35);
+  --danger: #c62828;
+  --danger-solid: #c62828;
+  --danger-hover: #a61f1f;
+  --danger-soft: #fdecec;
+  --danger-border: #f3c4c4;
+  --success: #17703c;
+  --success-solid: #1b7f45;
+  --success-hover: #146336;
+  --success-soft: #e6f6ec;
+  --success-border: #bfe6cd;
+  --info: #1d5fc4;
+  --info-soft: #e8f1fd;
+  --info-border: #c3dafa;
+  --warn: #8a5a08;
+  --warn-soft: #fff4dc;
+  --warn-border: #f1d9a0;
+  --paid: #6a3fb5;
+  --paid-soft: #f1eafc;
+  --neutral: #4d566e;
+  --neutral-soft: #eceff5;
+  --row-hover: #fafbfe;
+  --toast-info: #2f3a5a;
+  --backdrop: rgba(15, 20, 40, 0.5);
+  --tab-count: rgba(0, 0, 0, 0.08);
+  --modal-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  --shadow: 0 1px 2px rgba(20, 27, 52, 0.06), 0 4px 14px rgba(20, 27, 52, 0.05);
+}
+
+.theme-toggle { width: 34px; height: 34px; padding: 0; border-radius: 50%; font-size: 1rem; line-height: 1; }
+.login-page { position: relative; }
+.login-theme-toggle { position: absolute; top: 1rem; right: 1rem; }
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); }
@@ -151,6 +202,20 @@ a { color: var(--primary); }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table a.row-link { color: var(--text); font-weight: 600; text-decoration: none; }
 .table a.row-link:hover { color: var(--primary); text-decoration: underline; }
+/* Narrow screens: each row becomes a card with captioned fields (labels from data-label). */
+@media (max-width: 860px) {
+  .table-cards thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table-cards, .table-cards tbody { display: block; }
+  .table-cards tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem 1rem; padding: 0.9rem 0.25rem; border-bottom: 1px solid var(--border); }
+  .table-cards tbody tr:last-child { border-bottom: 0; }
+  .table-cards tbody tr:hover { background: none; }
+  .table-cards td { display: block; padding: 0; border: 0; white-space: normal; }
+  .table-cards td.right { text-align: left; }
+  .table-cards td[data-label]::before { content: attr(data-label); display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin-bottom: 0.1rem; }
+  .table-cards td.cell-id { display: none; }
+  .table-cards td.cell-title, .table-cards td.cell-action { grid-column: 1 / -1; }
+  .table-cards td.cell-action .btn { width: 100%; }
+}
 .toolbar { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
 .toolbar .input, .toolbar .select { width: auto; min-width: 150px; }
 .pager { display: flex; justify-content: space-between; align-items: center; padding-top: 0.9rem; }
@@ -165,7 +230,7 @@ a { color: var(--primary); }
 
 /* ===== Modal ===== */
 .modal-backdrop { position: fixed; inset: 0; background: var(--backdrop); display: grid; place-items: center; padding: 1rem; z-index: 50; }
-.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: min(520px, 100%); padding: 1.4rem; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); max-height: 90vh; overflow-y: auto; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: min(520px, 100%); padding: 1.4rem; box-shadow: var(--modal-shadow); max-height: 90vh; overflow-y: auto; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; }
 
 /* ===== Spinner & toast ===== */
@@ -202,7 +267,7 @@ a { color: var(--primary); }
 .tab { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.85rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer; }
 .tab:hover { color: var(--text); background: var(--neutral-soft); }
 .tab-active, .tab-active:hover { background: var(--primary-solid); border-color: var(--primary-solid); color: var(--on-solid); }
-.tab-count { background: rgba(255, 255, 255, 0.08); border-radius: 999px; padding: 0 0.45rem; font-size: 0.75rem; }
+.tab-count { background: var(--tab-count); border-radius: 999px; padding: 0 0.45rem; font-size: 0.75rem; }
 .tab-active .tab-count { background: rgba(255, 255, 255, 0.22); }
 .is-loading { opacity: 0.55; transition: opacity 0.15s; pointer-events: none; }
 .amount-compare { display: flex; gap: 3rem; flex-wrap: wrap; }
@@ -220,3 +285,4 @@ a { color: var(--primary); }
 .inline-field { display: inline-flex; align-items: center; gap: 0.4rem; }
 .inline-field .input { min-width: 0; }
 .modal .field { margin-bottom: 0.9rem; }
+.modal form > p { margin-bottom: 1.1rem; } /* breathing room before the next field label */

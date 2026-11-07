@@ -64,28 +64,43 @@ export function AuthProvider({ children }) {
     return () => setSessionHandlers()
   }, [applyUser, clearLocalSession, toast])
 
-  // Log out in one tab -> log out in all tabs.
+  // Keep tabs in sync. They share one refresh cookie, so one browser = one signed-in user:
+  //   logout in one tab -> log out everywhere;
+  //   sign-in (possibly as someone else) in one tab -> the others switch to that user now,
+  //   instead of silently at their next refresh.
   useEffect(() => {
     const channel = openChannel()
     channelRef.current = channel
     if (!channel) return undefined
     channel.onmessage = (event) => {
-      if (event.data?.type === 'logout' && userRef.current) {
+      const message = event.data
+      if (message?.type === 'logout' && userRef.current) {
         clearLocalSession()
         toast.info('You signed out in another tab.')
+      }
+      if (message?.type === 'login' && userRef.current?.id !== message.userId) {
+        const previous = userRef.current
+        api
+          .refresh() // the shared cookie now belongs to the new user
+          .then((session) => {
+            applyUser(session.user)
+            if (previous) toast.info(`You're now signed in as ${session.user.name} (from another tab).`)
+          })
+          .catch(() => clearLocalSession())
       }
     }
     return () => {
       channel.close()
       channelRef.current = null
     }
-  }, [clearLocalSession, toast])
+  }, [applyUser, clearLocalSession, toast])
 
   const login = useCallback(
     async (email, password) => {
       const session = await api.login(email, password)
       authToken.set(session.access_token)
       applyUser(session.user)
+      channelRef.current?.postMessage({ type: 'login', userId: session.user.id })
       return session.user
     },
     [applyUser],
