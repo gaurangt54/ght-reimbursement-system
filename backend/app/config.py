@@ -20,3 +20,5 @@ CURRENCY_DECIMALS = {"INR": 2}
 MAX_CLAIM_AMOUNT = Decimal(os.getenv("MAX_CLAIM_AMOUNT", "100000.00"))            # cap per claim
 RECEIPT_REQUIRED_ABOVE = Decimal(os.getenv("RECEIPT_REQUIRED_ABOVE", "1000.00"))  # receipt needed above this
 MAX_EXPENSE_AGE_DAYS = int(os.getenv("MAX_EXPENSE_AGE_DAYS", "90"))               # no claims for older expenses
+
+CATEGORIES = ["Travel", "Meals", "Accommodation", "Office Supplies", "Software", "Training", "Other"]
