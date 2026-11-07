@@ -13,6 +13,7 @@ __pycache__/
 *.db
 *.db-wal
 *.db-shm
+*.db-journal
 *.sqlite3
 
 # Node / Vite
