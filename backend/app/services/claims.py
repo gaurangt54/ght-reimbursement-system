@@ -25,6 +25,11 @@ _EDITABLE_FIELDS = ("title", "description", "category", "amount", "expense_date"
 
 # ---------- helpers ----------
 
+def _fmt(value) -> str:
+    """Stable text for history entries: money always has 2 decimals ('6500.00', not '6500')."""
+    return f"{value:.2f}" if isinstance(value, Decimal) else str(value)
+
+
 def get_claim(db: Session, user: User, claim_id: int) -> Claim:
     """Load a claim the user is allowed to see, else 404 (don't reveal it exists)."""
     claim = db.get(Claim, claim_id)
@@ -138,7 +143,7 @@ def update_claim(db: Session, user: User, claim_id: int, data: ClaimIn) -> Claim
         receipt_ref=data.receipt_ref, for_submit=False,
     ))
     new_values = {f: getattr(data, f) for f in _EDITABLE_FIELDS}
-    changes = {f: [str(getattr(claim, f)), str(v)]
+    changes = {f: [_fmt(getattr(claim, f)), _fmt(v)]
                for f, v in new_values.items() if getattr(claim, f) != v}
     if not changes:
         return claim  # nothing changed: no version bump, no history noise
@@ -218,7 +223,7 @@ def approve_claim(db: Session, user: User, claim_id: int, data: ApproveIn) -> Cl
                 "review_comment": data.comment, "reviewed_at": utcnow()},
         action="partially_approved" if partial else "approved",
         expected_version=data.expected_version, comment=data.comment,
-        details={"claimed": str(claim.amount), "approved": str(approved)},
+        details={"claimed": _fmt(claim.amount), "approved": _fmt(approved)},
     )
 
 
@@ -243,5 +248,5 @@ def pay_claim(db: Session, user: User, claim_id: int, data: PayIn) -> Claim:
         values={"status": PAID, "paid_at": utcnow(), "paid_by_id": user.id,
                 "payment_reference": data.payment_reference},
         action="paid", expected_version=data.expected_version,
-        details={"amount": str(claim.approved_amount)},
+        details={"amount": _fmt(claim.approved_amount)},
     )
