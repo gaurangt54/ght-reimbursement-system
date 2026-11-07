@@ -58,7 +58,8 @@ class PayIn(ActionIn):
     payment_reference: str | None = Field(default=None, max_length=64)
 
     _clean = field_validator("payment_reference")(_blank_to_none)
-    
+
+
 # ======================= Response bodies =======================
 
 class UserOut(BaseModel):
@@ -68,12 +69,23 @@ class UserOut(BaseModel):
     role: str | None = None
 
 
-class LoginIn(BaseModel):
-    user_id: int
+class LoginIn(_Base):
+    # Deliberately loose: a malformed email gets the same "incorrect email or password"
+    # answer as a wrong one. Strict length caps just stop absurdly large bodies.
+    email: str = Field(min_length=1, max_length=150)
+    password: str = Field(min_length=1, max_length=200)
 
 
-class LoginOut(BaseModel):
-    token: str
+class ChangePasswordIn(BaseModel):  # no whitespace stripping: spaces are part of a password
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=1, max_length=200)
+
+
+class TokenOut(BaseModel):
+    """The refresh token is never in the body; it is only sent as an HttpOnly cookie."""
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int  # seconds
     user: UserOut
 
 

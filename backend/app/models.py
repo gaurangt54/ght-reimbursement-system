@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import (
-    JSON, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, TypeDecorator, text,
+    JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, TypeDecorator, text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -67,19 +67,33 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
-    email: Mapped[str] = mapped_column(String(150), unique=True)
+    email: Mapped[str] = mapped_column(String(150), unique=True)  # stored lower-case
     role: Mapped[str] = mapped_column(String(20))
+    # bcrypt hash. NULL means the account cannot log in (e.g. created without a password).
+    password_hash: Mapped[str | None] = mapped_column(String(100))
+    # Deactivated users are refused on their very next request (the user is loaded per request).
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
-class AuthSession(Base):
-    """Mocked login: choosing a user issues an opaque bearer token."""
+class RefreshToken(Base):
+    """One row per issued refresh token. Only the SHA-256 of the token is stored.
 
-    __tablename__ = "sessions"
+    Tokens rotate on every refresh: the old row gets `revoked_at` + `replaced_by`, and the new
+    row joins the same `family_id` (one family = one login on one device). Presenting an
+    already-rotated token outside the grace window revokes the whole family.
+    """
 
-    token: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    family_id: Mapped[str] = mapped_column(String(32), index=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    replaced_by: Mapped[int | None] = mapped_column(ForeignKey("refresh_tokens.id"))
 
     user: Mapped[User] = relationship()
 

@@ -1,15 +1,22 @@
 // One function per backend endpoint, so components never build URLs by hand.
-import { download, request } from './client'
+import { download, refreshSession, request, requestWithCsrf } from './client'
 
 const withVersion = (expectedVersion) =>
   expectedVersion === undefined ? undefined : { expected_version: expectedVersion }
 
 export const api = {
-  // ---- auth (mocked login) ----
-  listUsers: () => request('GET', '/api/auth/users'),
-  login: (userId) => request('POST', '/api/auth/login', { body: { user_id: userId } }),
+  // ---- auth (JWT access token in memory + HttpOnly refresh cookie) ----
+  login: (email, password) => request('POST', '/api/auth/login', { body: { email, password } }),
+  refresh: () => refreshSession(),
   me: () => request('GET', '/api/auth/me'),
-  logout: () => request('POST', '/api/auth/logout'),
+  logout: () => requestWithCsrf('POST', '/api/auth/logout'),
+  changePassword: (currentPassword, newPassword) =>
+    request('POST', '/api/auth/change-password', {
+      body: { current_password: currentPassword, new_password: newPassword },
+    }),
+
+  // ---- users (approver-only directory, e.g. the employee filter) ----
+  listEmployees: (signal) => request('GET', '/api/users', { params: { role: 'employee' }, signal }),
 
   // ---- config the form needs (categories, limits) ----
   getMeta: () => request('GET', '/api/meta'),

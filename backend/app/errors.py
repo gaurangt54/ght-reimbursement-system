@@ -7,10 +7,12 @@ class ApiError(Exception):
     status_code = 400
     code = "BAD_REQUEST"
 
-    def __init__(self, message: str, *, code: str | None = None, fields: dict[str, str] | None = None):
+    def __init__(self, message: str, *, code: str | None = None, fields: dict[str, str] | None = None,
+                 headers: dict[str, str] | None = None):
         super().__init__(message)
         self.message = message
         self.fields = fields or {}
+        self.headers = headers or {}
         if code:
             self.code = code
 
@@ -38,3 +40,8 @@ class Conflict(ApiError):
 class Unprocessable(ApiError):
     status_code = 422
     code = "VALIDATION_ERROR"
+
+
+class TooManyRequests(ApiError):
+    status_code = 429
+    code = "TOO_MANY_ATTEMPTS"

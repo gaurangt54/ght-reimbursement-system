@@ -1,53 +1,95 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api/api'
-import { setUnauthorizedHandler, tokenStore } from '../api/client'
+import { authToken, setSessionHandlers } from '../api/client'
 import { useToast } from '../hooks/useToast'
 import { AuthContext } from './authContext'
 
-// status: 'loading' (checking a saved token) | 'authenticated' | 'anonymous'
+// Tells other open tabs about logins/logouts (not available in every environment).
+const CHANNEL_NAME = 'reimbursement-auth'
+function openChannel() {
+  try {
+    return typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(CHANNEL_NAME)
+  } catch {
+    return null
+  }
+}
+
+// status: 'loading' (restoring the session on app start) | 'authenticated' | 'anonymous'
+//
+// The access token lives only in memory (see api/client.js). After a reload it is gone, so on
+// start we call /api/auth/refresh: the HttpOnly cookie gets us a new one if the session is alive.
 export function AuthProvider({ children }) {
   const toast = useToast()
   const [user, setUser] = useState(null)
-  const [status, setStatus] = useState(() => (tokenStore.get() ? 'loading' : 'anonymous'))
+  const [status, setStatus] = useState('loading')
+  const userRef = useRef(null)
+  const channelRef = useRef(null)
 
-  // Restore the session after a page reload.
+  const applyUser = useCallback((next) => {
+    userRef.current = next
+    setUser(next)
+    setStatus(next ? 'authenticated' : 'anonymous')
+  }, [])
+
+  const clearLocalSession = useCallback(() => {
+    authToken.clear()
+    applyUser(null)
+  }, [applyUser])
+
+  // Restore the session after a reload. refreshSession() is single-flight, so StrictMode's
+  // double effect still makes only one request; the `cancelled` flag ignores the first run.
   useEffect(() => {
-    if (status !== 'loading') return undefined
     let cancelled = false
     api
-      .me()
-      .then((me) => {
-        if (cancelled) return
-        setUser(me)
-        setStatus('authenticated')
-      })
-      .catch(() => {
-        if (cancelled) return
-        tokenStore.clear()
-        setStatus('anonymous')
-      })
+      .refresh()
+      .then((session) => !cancelled && applyUser(session.user))
+      .catch(() => !cancelled && applyUser(null))
     return () => {
       cancelled = true
     }
-  }, [status])
+  }, [applyUser])
 
-  // If any request comes back 401 (expired token), drop the session.
+  // The API client calls these when a refresh succeeds or the session is gone for good.
   useEffect(() => {
-    setUnauthorizedHandler(() => {
-      tokenStore.clear()
-      setUser(null)
-      setStatus('anonymous')
-      toast.info('Your session ended. Please log in again.')
+    setSessionHandlers({
+      refreshed: (next) => {
+        if (userRef.current) applyUser(next) // keeps role/name current
+      },
+      expired: () => {
+        if (!userRef.current) return // never signed in: nothing to announce
+        clearLocalSession()
+        toast.info('Your session expired. Please sign in again.')
+      },
     })
-  }, [toast])
+    return () => setSessionHandlers()
+  }, [applyUser, clearLocalSession, toast])
 
-  const login = useCallback(async (userId) => {
-    const { token, user: loggedIn } = await api.login(userId)
-    tokenStore.set(token)
-    setUser(loggedIn)
-    setStatus('authenticated')
-    return loggedIn
-  }, [])
+  // Log out in one tab -> log out in all tabs.
+  useEffect(() => {
+    const channel = openChannel()
+    channelRef.current = channel
+    if (!channel) return undefined
+    channel.onmessage = (event) => {
+      if (event.data?.type === 'logout' && userRef.current) {
+        clearLocalSession()
+        toast.info('You signed out in another tab.')
+      }
+    }
+    return () => {
+      channel.close()
+      channelRef.current = null
+    }
+  }, [clearLocalSession, toast])
+
+  const login = useCallback(
+    async (email, password) => {
+      const session = await api.login(email, password)
+      authToken.set(session.access_token)
+      applyUser(session.user)
+      return session.user
+    },
+    [applyUser],
+  )
 
   const logout = useCallback(async () => {
     try {
@@ -55,10 +97,9 @@ export function AuthProvider({ children }) {
     } catch {
       /* even if the server call fails, log out locally */
     }
-    tokenStore.clear()
-    setUser(null)
-    setStatus('anonymous')
-  }, [])
+    clearLocalSession()
+    channelRef.current?.postMessage({ type: 'logout' })
+  }, [clearLocalSession])
 
   const value = useMemo(() => ({ user, status, login, logout }), [user, status, login, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

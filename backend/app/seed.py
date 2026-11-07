@@ -1,17 +1,23 @@
-"""Create tables and (optionally) demo users and claims on first run."""
+"""Create tables and (when SEED_DEMO_DATA is on) demo users and claims on first run.
+
+Demo users all share the documented demo password (config.DEMO_PASSWORD, default
+"Password@123"). With SEED_DEMO_DATA off nobody is created: add users with the CLI
+(`python -m app.cli create-user`).
+"""
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.orm import Session
 
 from app import config
 from app.database import Base, SessionLocal, engine
 from app.models import APPROVER, EMPLOYEE, User
 from app.schemas import ApproveIn, ClaimIn, PayIn, RejectIn
+from app.security import hash_password
 from app.services import claims as svc
 
-USERS = [
+DEMO_USERS = [
     ("Aarav Sharma", "aarav@napho.test", EMPLOYEE),
     ("Priya Nair", "priya@napho.test", EMPLOYEE),
     ("Rohan Mehta", "rohan@napho.test", EMPLOYEE),
@@ -20,14 +26,36 @@ USERS = [
 ]
 
 
+def check_schema() -> None:
+    """There are no migrations, so refuse to start on a database from an older version."""
+    insp = inspect(engine)
+    if insp.has_table("users"):
+        columns = {c["name"] for c in insp.get_columns("users")}
+        if "password_hash" not in columns or not insp.has_table("refresh_tokens"):
+            raise RuntimeError(
+                "The database was created by an older version of this app (no password columns). "
+                "Run `python -m app.cli reset-db` in backend/ to recreate it."
+            )
+
+
 def init_db() -> None:
+    check_schema()
     Base.metadata.create_all(engine)
+    if not config.SEED_DEMO_DATA:
+        return
     with SessionLocal() as db:
         if db.scalar(select(User.id).limit(1)) is None:
-            db.add_all(User(name=n, email=e, role=r) for n, e, r in USERS)
-            db.commit()
-            if config.SEED_DEMO_DATA:
-                _seed_demo_claims(db)
+            create_demo_users(db)
+            _seed_demo_claims(db)
+
+
+def create_demo_users(db: Session, password: str | None = None) -> list[User]:
+    # One hash shared by all demo users: hashing is deliberately slow.
+    password_hash = hash_password(password or config.DEMO_PASSWORD)
+    users = [User(name=n, email=e, role=r, password_hash=password_hash) for n, e, r in DEMO_USERS]
+    db.add_all(users)
+    db.commit()
+    return users
 
 
 def _claim(title, category, amount, days_ago, receipt="INV-0001", description=None) -> ClaimIn:

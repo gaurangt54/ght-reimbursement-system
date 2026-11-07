@@ -10,7 +10,6 @@ import { useToast } from '../hooks/useToast'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { errorMessage } from '../lib/errors'
 import { STATUS_META } from '../lib/format'
-import { ROLES } from '../lib/routes'
 
 const PAGE_SIZE = 10
 const REVIEWED_STATUSES = ['APPROVED', 'REJECTED', 'PAID']
@@ -39,7 +38,7 @@ export function ReviewedClaimsPage() {
 
   const summary = useApi((_p, signal) => api.getSummary(signal), null)
   const meta = useApi(() => api.getMeta(), null)
-  const users = useApi(() => api.listUsers(), null)
+  const employeesApi = useApi((_p, signal) => api.listEmployees(signal), null)
 
   // The filters the server understands. Export uses the same ones (without paging),
   // so the file contains exactly what the filtered list shows.
@@ -67,7 +66,7 @@ export function ReviewedClaimsPage() {
     { value: '', label: 'All', count: totalReviewed },
     ...REVIEWED_STATUSES.map((value) => ({ value, label: STATUS_META[value].label, count: counts?.[value] })),
   ]
-  const employees = (users.data ?? []).filter((u) => u.role === ROLES.EMPLOYEE)
+  const employees = employeesApi.data ?? []
   const filtersActive = Boolean(status || q || category || employeeId || dateFrom || dateTo)
 
   return (
